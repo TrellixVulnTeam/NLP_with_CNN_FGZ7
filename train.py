@@ -23,16 +23,16 @@ tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity
 tf.flags.DEFINE_boolean("enable_word_embeddings", True, "Enable/disable the word embedding (default: True)")
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
-tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
+tf.flags.DEFINE_integer("num_filters", 100, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
-tf.flags.DEFINE_float("l2_reg_lambda", 0.3, "L2 regularization lambda (default: 0.0)")
+tf.flags.DEFINE_float("l2_reg_lambda", 0.25, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 20, "Number of training epochs (default: 200)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
-tf.flags.DEFINE_integer("num_checkpoints", 50, "Number of checkpoints to store (default: 5)")
+tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
@@ -193,7 +193,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                     print("glove file has been loaded\n")
                 sess.run(cnn.W.assign(initW))
 
-            def train_step(x_batch, y_batch, learning_rate, epoch):
+            def train_step(x_batch, y_batch, learning_rate):
                 """
                 A single training step
                 """
@@ -208,8 +208,8 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
                 if step % 20 == 0:
-                    print("{}: epoch {}, step {}, loss {:g}, acc {:g}, learning_rate {:g}"
-                          .format(time_str, epoch, step, loss, accuracy, learning_rate))
+                    print("{}: step {}, loss {:g}, acc {:g}, learning_rate {:g}"
+                          .format(time_str, step, loss, accuracy, learning_rate))
                 train_summary_writer.add_summary(summaries, step)
 
             def dev_step(x_batch, y_batch, writer=None):
@@ -229,23 +229,27 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                 if writer:
                     writer.add_summary(summaries, step)
 
+            def get_learning_rate(decay_speed, counter):
+                # It uses dynamic learning rate with a high value at the beginning to speed up the training
+                max_learning_rate = 0.005
+                min_learning_rate = 0.0001
+                learning_rate = min_learning_rate + (max_learning_rate - min_learning_rate) * math.exp(
+                    -counter / decay_speed)
+                return learning_rate
+
             # Generate batches
             batches = data_helpers.batch_iter(
                 list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
 
-            # It uses dynamic learning rate with a high value at the beginning to speed up the training
-            max_learning_rate = 0.005
-            min_learning_rate = 0.0001
             decay_speed = FLAGS.decay_coefficient * len(y_train) / FLAGS.batch_size
 
             # Training loop. For each batch...
             counter = 0
             for batch in batches:
-                learning_rate = min_learning_rate + (max_learning_rate - min_learning_rate) * math.exp(
-                    -counter / decay_speed)
+                learning_rate = get_learning_rate(decay_speed, counter)
                 counter += 1
                 x_batch, y_batch = zip(*batch)
-                train_step(x_batch, y_batch, learning_rate, counter)
+                train_step(x_batch, y_batch, learning_rate)
                 current_step = tf.train.global_step(sess, global_step)
                 if current_step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")
@@ -260,4 +264,5 @@ def main(argv=None):
     train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embedding_dimension)
 
 if __name__ == '__main__':
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     tf.app.run()
