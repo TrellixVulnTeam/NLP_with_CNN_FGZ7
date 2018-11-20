@@ -29,10 +29,10 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.3, "L2 regularization lambda (default: 
 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
-tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
+tf.flags.DEFINE_integer("num_epochs", 20, "Number of training epochs (default: 200)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
-tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
+tf.flags.DEFINE_integer("num_checkpoints", 50, "Number of checkpoints to store (default: 5)")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
@@ -51,6 +51,7 @@ def load_data_and_labels():
     with open("config.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
+    embedding_name = None
     dataset_name = cfg["datasets"]["default"]
     if FLAGS.enable_word_embeddings and cfg['word_embeddings']['default'] is not None:
         embedding_name = cfg['word_embeddings']['default']
@@ -71,6 +72,7 @@ def load_data_and_labels():
                                                        categories=cfg["datasets"][dataset_name]["categories"],
                                                        shuffle=cfg["datasets"][dataset_name]["shuffle"],
                                                        random_state=cfg["datasets"][dataset_name]["random_state"])
+    print("Loading dataset: {}. [Embedding: {}]".format(dataset_name, embedding_name))
     x_text, y = data_helpers.load_data_labels(datasets)
     return x_text, y, embedding_name, embedding_dimension
 
@@ -127,7 +129,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
 
             # Define Training procedure
             global_step = tf.Variable(0, name="global_step", trainable=False)
-            optimizer = tf.train.AdamOptimizer(cnn.learning_rate)
+            optimizer = tf.train.GradientDescentOptimizer(cnn.learning_rate)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -191,7 +193,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                     print("glove file has been loaded\n")
                 sess.run(cnn.W.assign(initW))
 
-            def train_step(x_batch, y_batch, learning_rate):
+            def train_step(x_batch, y_batch, learning_rate, epoch):
                 """
                 A single training step
                 """
@@ -205,8 +207,9 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}, learning_rate {:g}"
-                      .format(time_str, step, loss, accuracy, learning_rate))
+                if step % 20 == 0:
+                    print("{}: epoch {}, step {}, loss {:g}, acc {:g}, learning_rate {:g}"
+                          .format(time_str, epoch, step, loss, accuracy, learning_rate))
                 train_summary_writer.add_summary(summaries, step)
 
             def dev_step(x_batch, y_batch, writer=None):
@@ -242,7 +245,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, embedding_name, embed
                     -counter / decay_speed)
                 counter += 1
                 x_batch, y_batch = zip(*batch)
-                train_step(x_batch, y_batch, learning_rate)
+                train_step(x_batch, y_batch, learning_rate, counter)
                 current_step = tf.train.global_step(sess, global_step)
                 if current_step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")

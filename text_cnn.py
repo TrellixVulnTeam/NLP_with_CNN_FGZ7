@@ -1,6 +1,4 @@
 import tensorflow as tf
-import numpy as np
-from gensim.models import word2vec
 
 class TextCNN(object):
     """
@@ -10,6 +8,7 @@ class TextCNN(object):
     def __init__(
       self, sequence_length, num_classes, vocab_size,
       embedding_size, filter_sizes, num_filters, l2_reg_lambda=0.0):
+        print("CNN - Data: num_classes: {}. vocab_size: {}".format(num_classes, vocab_size))
 
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")

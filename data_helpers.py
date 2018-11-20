@@ -110,6 +110,7 @@ def load_data_labels(datasets):
         label[datasets['target'][i]] = 1
         labels.append(label)
     y = np.array(labels)
+    print("# data: {}, # labels: {}".format(len(x_text), len(datasets['target_names'])))
     return [x_text, y]
 
 
