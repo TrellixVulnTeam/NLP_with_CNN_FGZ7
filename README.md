@@ -2,6 +2,13 @@ This work is basically an attempt to do sentence classification on different dat
 
 The README from the foundational project is retained [here](README_fdn.md)
 
+## Datasets
+- [Movie Review Polarity Data](http://www.cs.cornell.edu/people/pabo/movie-review-data/rt-polaritydata.tar.gz)
+- [Twenty Newsgroups Data Set ](https://archive.ics.uci.edu/ml/datasets/Twenty+Newsgroups)
+
+## Weights for Initialization
+- [word2vec (Google News)](https://github.com/mmihaltz/word2vec-GoogleNews-vectors) (better still, [ download it from Google Drive](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing))
+- [GloVe (Wikipedia data)](https://nlp.stanford.edu/data/glove.6B.zip) (The home page is [here](https://nlp.stanford.edu/projects/glove/))
 
 ## References
 

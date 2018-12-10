@@ -70,5 +70,7 @@ target/
 
 .vscode/
 .idea/
-runs/
 venv/
+runs/
+log
+data/

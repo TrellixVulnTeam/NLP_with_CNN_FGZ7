@@ -54,24 +54,59 @@ def get_datasets_20newsgroup(subset='train', categories=None, shuffle=True, rand
     :param random_state: seed integer to shuffle the dataset
     :return: data and labels of the newsgroup
     """
-    datasets = fetch_20newsgroups(subset=subset, categories=categories, shuffle=shuffle, random_state=random_state)
+    datasets = fetch_20newsgroups(subset=subset, categories=categories, shuffle=shuffle, random_state=random_state, data_home="data/20newsgroup")
     return datasets
 
 
-def get_datasets_mrpolarity(positive_data_file, negative_data_file):
+def get_datasets_mrpolarity(positive_data_file, negative_data_file, subset="train"):
     """
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
+    import os
+    if not os.path.exists(positive_data_file) or not os.path.exists(negative_data_file):
+        from six.moves import urllib
+        print('Downloading from internet: ')
+        url = "http://www.cs.cornell.edu/people/pabo/movie-review-data/rt-polaritydata.tar.gz"
+        zip_path = "data/rt-polaritydata.tar.gz"
+        local_filename, _ = urllib.request.urlretrieve(url, zip_path)
+        print("Downloaded file to {}. Extracting now".format(local_filename))
+        import tarfile
+        with tarfile.open(local_filename, "r:gz") as tar:
+            tar.extractall(path="./data")
+        print("file extracted")
+
     # Load data from files
-    positive_examples = list(open(positive_data_file, "r").readlines())
-    positive_examples = [s.strip() for s in positive_examples]
-    negative_examples = list(open(negative_data_file, "r").readlines())
-    negative_examples = [s.strip() for s in negative_examples]
+    # data is 5331 for each label => 10662. Use 4500 each for training
+    n_train = 4500
+    if subset == "train":
+        positive_examples = [None] * n_train
+        negative_examples = [None] * n_train
+        i = 0
+        with open(positive_data_file, "r") as f:
+            for line in f:
+                positive_examples[i] = line.strip()
+                i += 1
+                if i == n_train:
+                    break
+        i = 0
+        with open(negative_data_file, "r") as f:
+            for line in f:
+                negative_examples[i] = line.strip()
+                i += 1
+                if i == n_train:
+                    break
+    else:
+        with open(positive_data_file, "r") as f:
+            positive_examples = list(f.readlines())[n_train:]
+            positive_examples = [s.strip() for s in positive_examples]
+        with open(negative_data_file, "r") as f:
+            negative_examples = list(f.readlines())[n_train:]
+            negative_examples = [s.strip() for s in negative_examples]
 
     datasets = dict()
     datasets['data'] = positive_examples + negative_examples
-    target = [0 for x in positive_examples] + [1 for x in negative_examples]
+    target = ([0] * len(positive_examples)) + ([1] * len(negative_examples))
     datasets['target'] = target
     datasets['target_names'] = ['positive_examples', 'negative_examples']
     return datasets
@@ -152,7 +187,7 @@ def load_embedding_vectors_word2vec(vocabulary, filename, binary):
                 idx = vocabulary.get(word)
                 if idx != 0:
                     embedding_vectors[idx] = vector
-        f.close()
+
         return embedding_vectors
 
 
@@ -160,13 +195,13 @@ def load_embedding_vectors_glove(vocabulary, filename, vector_size):
     # load embedding_vectors from the glove
     # initial matrix with random uniform
     embedding_vectors = np.random.uniform(-0.25, 0.25, (len(vocabulary), vector_size))
-    f = open(filename)
-    for line in f:
-        values = line.split()
-        word = values[0]
-        vector = np.asarray(values[1:], dtype="float32")
-        idx = vocabulary.get(word)
-        if idx != 0:
-            embedding_vectors[idx] = vector
-    f.close()
+    with open(filename) as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            vector = np.asarray(values[1:], dtype="float32")
+            idx = vocabulary.get(word)
+            if idx != 0:
+                embedding_vectors[idx] = vector
+
     return embedding_vectors

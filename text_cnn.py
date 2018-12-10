@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class TextCNN(object):
     """
     A CNN for text classification.
