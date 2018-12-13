@@ -1,14 +1,14 @@
 word_embeddings:
   # Two types of word embedding algorithm (word2vec and glove) are supported.
   # Just set the default to empty string to disable the word embeddings
-  default:
+  default: word2vec
   word2vec:
     path: data/GoogleNews-vectors-negative300.bin
     dimension: 300
     binary: True
   glove:
-    path: data/glove.6B/glove.6B.100d.txt
-    dimension: 100
+    path: data/glove.6B/glove.6B.300d.txt
+    dimension: 300
     length: 400000
 
 datasets:
@@ -31,8 +31,8 @@ datasets:
     categories:
       - rec.sport.hockey
       - comp.graphics
-      - sci.med
-      - soc.religion.christian
+    #   - sci.med
+    #  - soc.religion.christian
     shuffle: True
     random_state: 42
   localdata:
